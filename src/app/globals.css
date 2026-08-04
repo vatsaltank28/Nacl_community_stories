@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #0D0D0D;
+  --secondary: #F7F5F2;
+  --accent: #FF6B35;
+  --additional: #D9D9D9;
+  
+  --background: var(--primary);
+  --foreground: var(--secondary);
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-additional: var(--additional);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-neue-montreal), var(--font-inter), var(--font-general-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Base custom utilities */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
