@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Users, Calendar as CalendarIcon, Settings, Search, Trash2, Check, X, Sparkles, Mail, ShieldCheck } from "lucide-react";
-import { getEvents, getRegistrations, createEvent, deleteEvent, updateRegistrationStatus, getCustomerStories, deleteCustomerStory, clearAllCustomerStories, resetCustomerStories, getSubscribers, EventType, RegistrationType, CustomerStoryType, SubscriberType } from "@/lib/store";
+import { Plus, Users, Calendar as CalendarIcon, Settings, Search, Trash2, Check, X, Mail, ShieldCheck } from "lucide-react";
+import { getEvents, getRegistrations, createEvent, deleteEvent, updateRegistrationStatus, getSubscribers, EventType, RegistrationType, SubscriberType } from "@/lib/store";
 import { motion } from "framer-motion";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("events");
   const [events, setEvents] = useState<EventType[]>([]);
   const [registrations, setRegistrations] = useState<RegistrationType[]>([]);
-  const [customerStories, setCustomerStories] = useState<CustomerStoryType[]>([]);
   const [subscribers, setSubscribers] = useState<SubscriberType[]>([]);
-  const [storyMapReviews, setStoryMapReviews] = useState<any[]>([]);
 
   // Security state
   const [passcode, setPasscode] = useState("");
@@ -33,19 +31,6 @@ export default function AdminDashboard() {
   
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
-  const [storyFilterEvent, setStoryFilterEvent] = useState("all");
-
-  const loadStoryMapReviews = async () => {
-    try {
-      const res = await fetch("/api/reviews");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setStoryMapReviews(data);
-      }
-    } catch (err) {
-      console.warn("Failed to load story map reviews in admin:", err);
-    }
-  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -57,60 +42,18 @@ export default function AdminDashboard() {
     const loadAdminData = () => {
       setEvents(getEvents());
       setRegistrations(getRegistrations());
-      setCustomerStories(getCustomerStories());
       setSubscribers(getSubscribers());
-      loadStoryMapReviews();
     };
     loadAdminData();
 
-    window.addEventListener("nacl_stories_update", loadAdminData);
     window.addEventListener("nacl_events_update", loadAdminData);
     window.addEventListener("nacl_subscribers_update", loadAdminData);
 
     return () => {
-      window.removeEventListener("nacl_stories_update", loadAdminData);
       window.removeEventListener("nacl_events_update", loadAdminData);
       window.removeEventListener("nacl_subscribers_update", loadAdminData);
     };
   }, []);
-
-  const handleDeleteStory = (id: string) => {
-    if (confirm("Are you sure you want to remove this customer photo and experience details?")) {
-      deleteCustomerStory(id);
-      setCustomerStories(getCustomerStories());
-      window.dispatchEvent(new Event("nacl_stories_update"));
-    }
-  };
-
-  const handleDeleteStoryMapReview = async (id: string) => {
-    if (confirm("Are you sure you want to delete this story map review pin?")) {
-      await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
-      await loadStoryMapReviews();
-    }
-  };
-
-  const handleClearAllStoryMapReviews = async () => {
-    if (confirm("Are you sure you want to clear all story map reviews?")) {
-      await fetch("/api/reviews?clearAll=true", { method: "DELETE" });
-      await loadStoryMapReviews();
-    }
-  };
-
-  const handleClearAllStories = async () => {
-    if (confirm("Are you sure you want to clear all customer stories?")) {
-      await clearAllCustomerStories();
-      setCustomerStories(getCustomerStories());
-      window.dispatchEvent(new Event("nacl_stories_update"));
-    }
-  };
-
-  const handleResetStories = async () => {
-    if (confirm("Reset stories to default event stories?")) {
-      await resetCustomerStories();
-      setCustomerStories(getCustomerStories());
-      window.dispatchEvent(new Event("nacl_stories_update"));
-    }
-  };
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,14 +66,38 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApprove = (id: string) => {
+  const handleApprove = async (id: string) => {
     updateRegistrationStatus(id, "approved");
+    try {
+      await fetch("/api/registrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registrationId: id,
+          status: "approved",
+          adminApproved: true,
+          approvedBy: "NaCl Admin Portal"
+        })
+      });
+    } catch {}
     setRegistrations(getRegistrations());
     window.dispatchEvent(new Event("nacl_events_update"));
   };
 
-  const handleReject = (id: string) => {
+  const handleReject = async (id: string) => {
     updateRegistrationStatus(id, "rejected");
+    try {
+      await fetch("/api/registrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registrationId: id,
+          status: "rejected",
+          adminApproved: false,
+          approvedBy: "NaCl Admin Portal"
+        })
+      });
+    } catch {}
     setRegistrations(getRegistrations());
     window.dispatchEvent(new Event("nacl_events_update"));
   };
@@ -317,14 +284,6 @@ export default function AdminDashboard() {
             }`}
           >
             <Users size={16} /> Registrations
-          </button>
-          <button 
-            onClick={() => setActiveTab("stories")}
-            className={`shrink-0 lg:w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl transition-colors text-xs lg:text-sm font-bold uppercase tracking-wider whitespace-nowrap snap-start ${
-              activeTab === "stories" ? "bg-accent text-primary font-black shadow-md" : "bg-secondary/5 lg:bg-transparent text-additional hover:bg-secondary/10 hover:text-white"
-            }`}
-          >
-            <Sparkles size={16} /> Customer Stories
           </button>
           <button 
             onClick={() => setActiveTab("subscribers")}
@@ -515,94 +474,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "stories" && (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-extrabold text-white tracking-tight">Story Map Reviews & Customer Stories</h1>
-                <p className="text-xs text-additional mt-1">
-                  Manage interactive map pins and reviews. <span className="text-cyan-400 font-bold">Only admins can see full reviewer names.</span>
-                </p>
-              </div>
 
-              {/* Batch Actions */}
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleClearAllStoryMapReviews}
-                  className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-xl text-xs font-bold transition-all border border-red-500/20 flex items-center gap-1.5"
-                >
-                  <Trash2 size={14} /> Clear All Story Pins
-                </button>
-              </div>
-            </div>
-
-            {/* Story Map Pins & Reviews List */}
-            {storyMapReviews.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {storyMapReviews.map((review) => (
-                  <div
-                    key={review.id || review._id}
-                    className="bg-secondary/5 border border-secondary/15 hover:border-accent/40 rounded-3xl p-6 relative flex flex-col justify-between space-y-4 shadow-xl transition-all"
-                  >
-                    <div className="space-y-3">
-                      {review.eventImage && (
-                        <div className="relative h-40 rounded-2xl overflow-hidden border border-secondary/10">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={review.eventImage}
-                            alt={review.eventName}
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-mono text-cyan-400 font-bold border border-cyan-400/30">
-                            {review.city} Hub Pin
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-black text-white">{review.reviewerName}</h3>
-                            <span className="text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                              Admin View Only
-                            </span>
-                          </div>
-                          <div className="text-[11px] font-semibold text-accent mt-0.5">
-                            ★ {review.rating}.0 — {review.eventName}
-                          </div>
-                        </div>
-
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 rounded-full shrink-0">
-                          {review.city}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-additional/90 leading-relaxed italic bg-white/5 p-3.5 rounded-2xl border border-white/5">
-                        &quot;{review.reviewText}&quot;
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t border-secondary/10 flex items-center justify-between text-xs">
-                      <span className="text-[10px] text-additional/50 font-mono">
-                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Active"}
-                      </span>
-                      <button
-                        onClick={() => handleDeleteStoryMapReview(review.id || review._id)}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white rounded-xl text-xs font-bold transition-all border border-red-500/20"
-                      >
-                        <Trash2 size={13} /> Remove Pin & Review
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-secondary/5 border border-secondary/10 rounded-3xl p-12 text-center text-additional/40 text-sm font-semibold">
-                No story map review pins submitted yet.
-              </div>
-            )}
-          </div>
-        )}
 
         {activeTab === "subscribers" && (
           <div className="space-y-8">

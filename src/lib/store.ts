@@ -57,11 +57,14 @@ export interface RegistrationType {
   date: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   qrCode: string;
+  paymentId?: string;
+  paymentMethod?: string;
 }
 
 export interface UserSession {
   name: string;
   email: string;
+  phone?: string;
   archetype?: string;
   isLoggedIn: boolean;
 }
@@ -245,6 +248,34 @@ export function createRegistration(
   archetype: string,
   ticketType: string = "General Admission"
 ): { registration: RegistrationType; success: boolean; message: string } {
+  return completeRazorpayRegistration({
+    eventId,
+    userName,
+    userEmail,
+    archetype,
+    ticketType,
+    paymentId: "pay_sim_" + Math.random().toString(36).substring(2, 11),
+    paymentMethod: "UPI"
+  });
+}
+
+export function completeRazorpayRegistration({
+  eventId,
+  userName,
+  userEmail,
+  archetype,
+  ticketType = "General Admission",
+  paymentId,
+  paymentMethod = "Razorpay UPI"
+}: {
+  eventId: string;
+  userName: string;
+  userEmail: string;
+  archetype: string;
+  ticketType?: string;
+  paymentId: string;
+  paymentMethod?: string;
+}): { registration: RegistrationType; success: boolean; message: string } {
   const events = getEvents();
   const eventIdx = events.findIndex(e => e.id === eventId);
   
@@ -275,21 +306,23 @@ export function createRegistration(
     ticketType,
     price: event.price,
     date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    status: "pending",
-    qrCode: code
+    status: "approved",
+    qrCode: code,
+    paymentId,
+    paymentMethod
   };
 
   registrations.push(newReg);
   saveRegistrations(registrations);
 
-  return { success: true, message: "Registration successful!", registration: newReg };
+  return { success: true, message: "Payment verified and registration confirmed!", registration: newReg };
 }
 
 export function getUserSession(): UserSession {
   if (!isClient) return { name: "", email: "", isLoggedIn: false };
   const data = localStorage.getItem(STORAGE_KEYS.USER);
   if (!data) {
-    const defaultUser: UserSession = { name: "Guest User", email: "guest@nacl.in", isLoggedIn: false };
+    const defaultUser: UserSession = { name: "", email: "", isLoggedIn: false };
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(defaultUser));
     return defaultUser;
   }

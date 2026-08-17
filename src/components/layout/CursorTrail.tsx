@@ -83,7 +83,7 @@ export default function CursorTrail() {
 
       lastMouseRef.current = { x, y };
 
-      const colors = ["#FF6B35", "#F7F5F2", "#FFA382"];
+      const colors = ["#ef542a", "#f0f2db", "#ffd139", "#aadeef"];
 
       for (let i = 0; i < count; i++) {
         const angle = Math.random() * Math.PI * 2;

@@ -20,7 +20,7 @@
     "lucide-react": "^1.17.0",
     "mongoose": "^9.6.3",
     "next": "15.5.19",
-    "next-auth": "^4.24.14",
+    "next-auth": "^4.24.15",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.6.0",

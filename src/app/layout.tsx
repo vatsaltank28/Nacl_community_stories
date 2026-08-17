@@ -57,6 +57,7 @@ export const metadata: Metadata = {
 
 import PetAssistant from "@/components/layout/PetAssistant";
 import ExitIntentPopup from "@/components/common/ExitIntentPopup";
+import SessionProviderWrapper from "@/components/auth/SessionProviderWrapper";
 
 export default function RootLayout({
   children,
@@ -85,18 +86,20 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-sans antialiased bg-primary text-secondary selection:bg-accent selection:text-primary`}>
-        <SoundProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <CursorTrail />
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Footer />
-            <PetAssistant />
-            <ExitIntentPopup />
-          </div>
-        </SoundProvider>
+        <SessionProviderWrapper>
+          <SoundProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <CursorTrail />
+              <Header />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+              <PetAssistant />
+              <ExitIntentPopup />
+            </div>
+          </SoundProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   );
